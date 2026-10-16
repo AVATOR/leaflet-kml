@@ -5,6 +5,7 @@
 - Added `examples/url.html` demo and a test suite (`npm test`)
 - Fixed crash on `LineString` without `coordinates` and on `GroundOverlay` without `LatLonBox`
 - Placemark `name` is now HTML-escaped in popups
+- Fixed `GroundOverlay` inside a `Folder` being added twice (see windycom/leaflet-kml#33)
 
 ### 1.1.0
 

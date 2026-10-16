@@ -123,3 +123,12 @@ test('gx:Track yields one point per gx:coord (no duplication across tracks)', ()
         '</Document></kml>'));
     assert.equal(layers[0].getLatLngs().length, 2);
 });
+
+test('GroundOverlay inside a Folder is added once, not also at top level', () => {
+    const layers = L.KML.parseKML(kml(
+        '<Folder><name>F</name><GroundOverlay><Icon><href>a.png</href></Icon>' +
+        '<LatLonBox><north>2</north><south>1</south><east>2</east><west>1</west></LatLonBox>' +
+        '</GroundOverlay></Folder>'));
+    assert.equal(layers.length, 1);
+    assert.ok(layers[0] instanceof L.ImageOverlay);
+});
