@@ -74,8 +74,9 @@ map.addLayer(track);
 A runnable demo is in [examples/url.html](examples/url.html). `fetch` does not work from `file://`, so serve the repo first:
 
 ```bash
-python3 -m http.server
-# open http://localhost:8000/examples/url.html
+npm install
+npm start
+# opens http://localhost:8000/examples/url.html
 ```
 
 ## Tests

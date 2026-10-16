@@ -4,7 +4,8 @@
   "description": "Leaflet KML layer plugin",
   "main": "L.KML.js",
   "scripts": {
-    "test": "node --test \"test/*.test.js\""
+    "test": "node --test \"test/*.test.js\"",
+    "start": "http-server . -p 8000 -c-1 -o /examples/url.html"
   },
   "repository": {
     "type": "git",
@@ -17,6 +18,7 @@
   },
   "homepage": "https://github.com/windycom/leaflet-kml#readme",
   "devDependencies": {
+    "http-server": "^14.1.1",
     "jsdom": "^29.1.1",
     "leaflet": "^1.9.4"
   }
