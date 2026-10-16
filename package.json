@@ -5,19 +5,23 @@
   "main": "L.KML.js",
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
-    "start": "http-server . -p 8000 -c-1 -o /examples/url.html"
+    "start": "http-server . -p 8000 -c-1 -o /examples/url.html",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/windycom/leaflet-kml.git"
+    "url": "git+https://github.com/AVATOR/leaflet-kml.git"
   },
   "author": "Pavel Shramov, Bruno Bergot",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/windycom/leaflet-kml/issues"
+    "url": "https://github.com/AVATOR/leaflet-kml/issues"
   },
-  "homepage": "https://github.com/windycom/leaflet-kml#readme",
+  "homepage": "https://github.com/AVATOR/leaflet-kml#readme",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
     "http-server": "^14.1.1",
     "jsdom": "^29.1.1",
     "leaflet": "^1.9.4"
