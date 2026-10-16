@@ -4,7 +4,7 @@
   "description": "Leaflet KML layer plugin",
   "main": "L.KML.js",
   "scripts": {
-    "test": "node --test \"test/*.test.js\"",
+    "test": "node --test test/kml.test.js",
     "start": "http-server . -p 8000 -c-1 -o /examples/url.html",
     "lint": "eslint ."
   },
