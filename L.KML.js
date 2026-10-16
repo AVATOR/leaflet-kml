@@ -9,9 +9,39 @@ L.KML = L.FeatureGroup.extend({
         this._layers = {};
         this._kmlOptions = kmlOptions;
 
-        if (kml) {
+        if (typeof kml === 'string') {
+            this.load(kml, kmlOptions);
+        } else if (kml) {
             this.addKML(kml, kmlOptions);
         }
+    },
+
+    // Load KML from a URL (fetch options may be passed as kmlOptions.fetchOptions).
+    // Fires 'loaded' on success and 'error' ({error: Error}) on failure.
+    load: function (url, kmlOptions) {
+        var self = this;
+        var fetchOptions = (kmlOptions && kmlOptions.fetchOptions) || {};
+        this._kml = url;
+
+        fetch(url, fetchOptions)
+            .then(function (res) {
+                if (!res.ok) {
+                    throw new Error('Failed to load KML: ' + res.status + ' ' + res.statusText);
+                }
+                return res.text();
+            })
+            .then(function (text) {
+                var xml = new DOMParser().parseFromString(text, 'text/xml');
+                if (xml.getElementsByTagName('parsererror').length) {
+                    throw new Error('Invalid KML/XML: ' + url);
+                }
+                self.addKML(xml, kmlOptions);
+            })
+            .catch(function (error) {
+                self.fire('error', { error: error, url: url });
+            });
+
+        return this;
     },
 
     addKML: function (xml, kmlOptions) {
@@ -273,13 +303,16 @@ L.Util.extend(L.KML, {
     }
 
     if (name) {
-      layer.bindPopup('<h2>' + name + '</h2>' + descr, { className: 'kml-popup'});
+      // name is plain text: escape it (description is HTML by KML spec and kept as is)
+      var title = document.createElement('div');
+      title.textContent = name;
+      layer.bindPopup('<h2>' + title.innerHTML + '</h2>' + descr, { className: 'kml-popup'});
     }
   },
 
     parseCoords: function (xml) {
         var el = xml.getElementsByTagName('coordinates');
-        return this._read_coords(el[0]);
+        return el.length ? this._read_coords(el[0]) : [];
     },
 
     parseLineString: function (line, xml, options) {
@@ -371,6 +404,7 @@ L.Util.extend(L.KML, {
 
     parseGroundOverlay: function (xml) {
         var latlonbox = xml.getElementsByTagName('LatLonBox')[0];
+        if (!latlonbox) { return; }
         var bounds = new L.LatLngBounds(
             [
                 latlonbox.getElementsByTagName('south')[0].childNodes[0].nodeValue,
@@ -411,6 +445,10 @@ L.Util.extend(L.KML, {
     }
 
 });
+
+L.kml = function (kml, kmlOptions) {
+    return new L.KML(kml, kmlOptions);
+};
 
 L.KMLIcon = L.Icon.extend({
     options: {

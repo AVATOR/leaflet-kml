@@ -1,3 +1,11 @@
+### Unreleased
+
+- `L.KML` now accepts a URL string and loads the file asynchronously via `fetch` (new `load` method, `loaded` / `error` events, `fetchOptions` option)
+- Added `L.kml()` factory
+- Added `examples/url.html` demo and a test suite (`npm test`)
+- Fixed crash on `LineString` without `coordinates` and on `GroundOverlay` without `LatLonBox`
+- Placemark `name` is now HTML-escaped in popups
+
 ### 1.1.0
 
 - Fixed markers wrong locations for already loaded icons
