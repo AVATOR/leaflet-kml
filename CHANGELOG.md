@@ -6,6 +6,8 @@
 - Fixed crash on `LineString` without `coordinates` and on `GroundOverlay` without `LatLonBox`
 - Placemark `name` is now HTML-escaped in popups
 - Fixed `GroundOverlay` inside a `Folder` being added twice (see windycom/leaflet-kml#33)
+- Added GitHub Actions CI (lint + tests), ESLint config and `.editorconfig`; code cleaned up to pass lint
+- Package metadata points to this repository; README examples use HTTPS and Leaflet 1.9
 
 ### 1.1.0
 

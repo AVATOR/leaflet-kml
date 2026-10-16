@@ -8,15 +8,15 @@ This plugin was extracted from Pavel Shramov's Leaflet Plugins [repository](http
 
 So far we have fixed few issues.
 
-Probably will work on Leaflet 1+, tested on Leaflet 1.4.
+Works with Leaflet 1.x (the test suite runs against Leaflet 1.9).
 
 ## How to use
 
 ```html
 <html>
     <head>
-        <link rel="stylesheet" href="http://unpkg.com/leaflet@1.4.0/dist/leaflet.css" />
-        <script src="http://unpkg.com/leaflet@1.4.0/dist/leaflet.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script src="./L.KML.js"></script>
     </head>
     <body>
@@ -24,7 +24,7 @@ Probably will work on Leaflet 1+, tested on Leaflet 1.4.
         <script type="text/javascript">
             // Make basemap
             const map = new L.Map('map', { center: new L.LatLng(58.4, 43.0), zoom: 11 });
-            const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+            const osm = new L.TileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
 
             map.addLayer(osm);
 
@@ -84,6 +84,7 @@ npm start
 ```bash
 npm install
 npm test
+npm run lint
 ```
 
 Tests run on Node's built-in test runner with jsdom (see `test/`).

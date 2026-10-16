@@ -255,7 +255,7 @@ L.Util.extend(L.KML, {
         }
 
         var multi = ['MultiGeometry', 'MultiTrack', 'gx:MultiTrack'];
-        for (h in multi) {
+        for (h = 0; h < multi.length; h++) {
             el = place.getElementsByTagName(multi[h]);
             for (i = 0; i < el.length; i++) {
                 var layer = this.parsePlacemark(el[i], xml, style, opts);
@@ -269,7 +269,7 @@ L.Util.extend(L.KML, {
         var layers = [];
 
         var parse = ['LineString', 'Polygon', 'Point', 'Track', 'gx:Track'];
-        for (j in parse) {
+        for (j = 0; j < parse.length; j++) {
             var tag = parse[j];
             el = place.getElementsByTagName(tag);
             for (i = 0; i < el.length; i++) {
@@ -281,7 +281,7 @@ L.Util.extend(L.KML, {
         if (!layers.length) {
             return;
         }
-        var layer = layers[0];
+        layer = layers[0];
         if (layers.length > 1) {
             layer = new L.FeatureGroup(layers);
         }
@@ -290,26 +290,26 @@ L.Util.extend(L.KML, {
         return layer;
     },
 
-  addPlacePopup: function(place, layer) {
-    var el, i, j, name, descr = '';
-    el = place.getElementsByTagName('name');
-    if (el.length && el[0].childNodes.length) {
-      name = el[0].childNodes[0].nodeValue;
-    }
-    el = place.getElementsByTagName('description');
-    for (i = 0; i < el.length; i++) {
-      for (j = 0; j < el[i].childNodes.length; j++) {
-        descr = descr + el[i].childNodes[j].nodeValue;
-      }
-    }
+    addPlacePopup: function (place, layer) {
+        var el, i, j, name, descr = '';
+        el = place.getElementsByTagName('name');
+        if (el.length && el[0].childNodes.length) {
+            name = el[0].childNodes[0].nodeValue;
+        }
+        el = place.getElementsByTagName('description');
+        for (i = 0; i < el.length; i++) {
+            for (j = 0; j < el[i].childNodes.length; j++) {
+                descr = descr + el[i].childNodes[j].nodeValue;
+            }
+        }
 
-    if (name) {
-      // name is plain text: escape it (description is HTML by KML spec and kept as is)
-      var title = document.createElement('div');
-      title.textContent = name;
-      layer.bindPopup('<h2>' + title.innerHTML + '</h2>' + descr, { className: 'kml-popup'});
-    }
-  },
+        if (name) {
+            // name is plain text: escape it (description is HTML by KML spec and kept as is)
+            var title = document.createElement('div');
+            title.textContent = name;
+            layer.bindPopup('<h2>' + title.innerHTML + '</h2>' + descr, { className: 'kml-popup'});
+        }
+    },
 
     parseCoords: function (xml) {
         var el = xml.getElementsByTagName('coordinates');
@@ -397,8 +397,8 @@ L.Util.extend(L.KML, {
     },
 
     _read_gxcoords: function (el) {
-        var text = '', coords = [];
-        text = el.firstChild.nodeValue.split(' ');
+        var coords = [];
+        var text = el.firstChild.nodeValue.split(' ');
         coords.push(new L.LatLng(text[1], text[0]));
         return coords;
     },
@@ -418,7 +418,7 @@ L.Util.extend(L.KML, {
         );
         var attributes = {Icon: true, href: true, color: true};
         function _parse (xml) {
-            var options = {}, ioptions = {};
+            var options = {}, ioptions;
             for (var i = 0; i < xml.childNodes.length; i++) {
                 var e = xml.childNodes[i];
                 var key = e.tagName;
@@ -436,8 +436,7 @@ L.Util.extend(L.KML, {
             }
             return options;
         }
-        var options = {};
-        options = _parse(xml);
+        var options = _parse(xml);
         if (latlonbox.getElementsByTagName('rotation')[0] !== undefined) {
             var rotation = latlonbox.getElementsByTagName('rotation')[0].childNodes[0].nodeValue;
             options.rotation = parseFloat(rotation);
