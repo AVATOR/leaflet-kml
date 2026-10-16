@@ -243,3 +243,37 @@ test('icon in compact (non pretty-printed) KML is applied', () => {
         '<Placemark><styleUrl>#ic</styleUrl><Point><coordinates>1,1</coordinates></Point></Placemark>'));
     assert.equal(layers[0].options.icon.options.iconUrl, 'a.png');
 });
+
+// --- module formats (UMD) ---
+
+const vm = require('node:vm');
+const pluginSource = fs.readFileSync(path.join(__dirname, '..', 'L.KML.js'), 'utf8');
+
+test('CommonJS: require() returns L.KML and registers it on Leaflet', () => {
+    assert.equal(require('../L.KML.js'), L.KML);
+    assert.equal(require('leaflet').KML, L.KML);
+});
+
+const fakeLeaflet = () => {
+    const cls = () => Object.assign(function () {}, { Default: function () {} });
+    return {
+        FeatureGroup: { extend: cls }, Icon: { extend: cls }, Marker: { extend: cls },
+        ImageOverlay: { extend: cls }, Util: { extend: () => {} }
+    };
+};
+
+test('AMD: registers as a module depending on leaflet', () => {
+    const fake = fakeLeaflet();
+    let deps, result;
+    const context = { define: Object.assign((d, f) => { deps = d; result = f(fake); }, { amd: true }) };
+    vm.runInNewContext(pluginSource, context);
+    assert.equal(deps.length, 1);
+    assert.equal(deps[0], 'leaflet');
+    assert.equal(result, fake.KML);
+});
+
+test('browser global: attaches to window.L when no module system is present', () => {
+    const fake = fakeLeaflet();
+    vm.runInNewContext(pluginSource, { self: { L: fake } });
+    assert.ok(fake.KML);
+});

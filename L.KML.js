@@ -2,6 +2,16 @@
     Copyright (c) 2011-2015, Pavel Shramov, Bruno Bergot - MIT licence
 */
 
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define(['leaflet'], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = factory(require('leaflet'));
+    } else {
+        factory(root.L);
+    }
+}(typeof self !== 'undefined' ? self : this, function (L) {
+
 L.KML = L.FeatureGroup.extend({
 
     initialize: function (kml, kmlOptions) {
@@ -678,3 +688,7 @@ L.RotatedImageOverlay = L.ImageOverlay.extend({
         return this._bounds;
     }
 });
+
+return L.KML;
+
+}));

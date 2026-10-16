@@ -1,5 +1,8 @@
 ### Unreleased
 
+- The plugin is now a UMD module: works as a script tag, CommonJS (`require`), AMD and via `import` in bundlers
+- Added `peerDependencies` on Leaflet 1.x and a `LICENSE` file
+- README rewritten with requirements, installation and a full API reference
 - `L.KML` now accepts a URL string and loads the file asynchronously via `fetch` (new `load` method, `loaded` / `error` events, `fetchOptions` option)
 - Added `L.kml()` factory
 - Loading by URL: pending request is cancelled by a new `load()` or `abort()` (AbortController), relative icon/overlay links are resolved against the file URL, KMZ archives are supported (`revokeResources()` frees the extracted images)

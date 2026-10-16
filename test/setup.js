@@ -1,7 +1,6 @@
 // Loads Leaflet + L.KML.js into a jsdom environment (the plugin expects globals).
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 const { JSDOM } = require('jsdom');
 
 const dom = new JSDOM('<!doctype html><div id="map"></div>', { pretendToBeVisual: true });
@@ -14,8 +13,8 @@ global.HTMLElement = dom.window.HTMLElement;
 global.L = require('leaflet');
 window.L = global.L;
 
-const file = path.join(__dirname, '..', 'L.KML.js');
-vm.runInThisContext(fs.readFileSync(file, 'utf8'), { filename: file });
+// The plugin is a UMD module: loading it through require() exercises the CommonJS branch.
+require('../L.KML.js');
 
 exports.L = global.L;
 exports.parse = (text) => new DOMParser().parseFromString(text, 'text/xml');
