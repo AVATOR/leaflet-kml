@@ -2,7 +2,19 @@
   "name": "leaflet-kml",
   "version": "1.1.0",
   "description": "Leaflet KML layer plugin",
+  "keywords": [
+    "leaflet",
+    "leaflet-plugin",
+    "kml",
+    "kmz",
+    "map",
+    "gis",
+    "overlay"
+  ],
   "main": "L.KML.js",
+  "files": [
+    "L.KML.js"
+  ],
   "scripts": {
     "test": "node --test test/kml.test.js",
     "start": "http-server . -p 8000 -c-1 -o /examples/url.html",
@@ -14,6 +26,9 @@
   },
   "author": "Pavel Shramov, Bruno Bergot",
   "license": "MIT",
+  "peerDependencies": {
+    "leaflet": "^1.0.0"
+  },
   "bugs": {
     "url": "https://github.com/AVATOR/leaflet-kml/issues"
   },

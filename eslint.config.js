@@ -10,7 +10,7 @@ module.exports = [
         languageOptions: {
             ecmaVersion: 2015,
             sourceType: 'script',
-            globals: { ...globals.browser, L: 'readonly' }
+            globals: { ...globals.browser, define: 'readonly', module: 'readonly', require: 'readonly' }
         }
     },
     {
