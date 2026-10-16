@@ -16,31 +16,74 @@ L.KML = L.FeatureGroup.extend({
         }
     },
 
-    // Load KML from a URL (fetch options may be passed as kmlOptions.fetchOptions).
-    // Fires 'loaded' on success and 'error' ({error: Error}) on failure.
+    // Load KML or KMZ from a URL (fetch options may be passed as kmlOptions.fetchOptions).
+    // Fires 'loaded' on success and 'error' ({error: Error, url: url}) on failure.
+    // Calling load() again (or abort()) cancels a request that is still in flight.
+    // Relative icon/overlay links are resolved against the URL of the file.
     load: function (url, kmlOptions) {
         var self = this;
-        var fetchOptions = (kmlOptions && kmlOptions.fetchOptions) || {};
+        var controller = typeof AbortController === 'function' ? new AbortController() : null;
+        var fetchOptions = L.Util.extend({}, kmlOptions && kmlOptions.fetchOptions);
+        if (controller && !fetchOptions.signal) { fetchOptions.signal = controller.signal; }
+
+        this.abort();
+        this._abortController = controller;
         this._kml = url;
+
+        function isCurrent() { return self._kml === url && self._abortController === controller; }
 
         fetch(url, fetchOptions)
             .then(function (res) {
                 if (!res.ok) {
                     throw new Error('Failed to load KML: ' + res.status + ' ' + res.statusText);
                 }
-                return res.text();
+                return res.arrayBuffer();
             })
-            .then(function (text) {
-                var xml = new DOMParser().parseFromString(text, 'text/xml');
+            .then(function (buffer) {
+                if (!L.KML._isZip(buffer)) {
+                    return { text: new TextDecoder('utf-8').decode(buffer), resources: null };
+                }
+                return L.KML._readKMZ(buffer);
+            })
+            .then(function (content) {
+                if (!isCurrent()) { return; }
+                var xml = new DOMParser().parseFromString(content.text, 'text/xml');
                 if (xml.getElementsByTagName('parsererror').length) {
                     throw new Error('Invalid KML/XML: ' + url);
                 }
-                self.addKML(xml, kmlOptions);
+                self._abortController = null;
+                self._resources = content.resources;
+                self.addKML(xml, L.Util.extend({}, kmlOptions, {
+                    baseUrl: url,
+                    resources: content.resources
+                }));
             })
             .catch(function (error) {
+                if (!isCurrent() || (error && error.name === 'AbortError')) { return; }
+                self._abortController = null;
                 self.fire('error', { error: error, url: url });
             });
 
+        return this;
+    },
+
+    // Cancel a pending load() request, if any.
+    abort: function () {
+        if (this._abortController) {
+            this._abortController.abort();
+            this._abortController = null;
+        }
+        return this;
+    },
+
+    // Release blob: URLs created for the images of a KMZ file.
+    // Call it when the layer is no longer needed.
+    revokeResources: function () {
+        var res = this._resources;
+        for (var name in res) {
+            if (Object.prototype.hasOwnProperty.call(res, name)) { URL.revokeObjectURL(res[name]); }
+        }
+        this._resources = null;
         return this;
     },
 
@@ -69,19 +112,19 @@ L.Util.extend(L.KML, {
         var layers = [], l;
         for (var i = 0; i < el.length; i++) {
             if (!this._check_folder(el[i])) { continue; }
-            l = this.parseFolder(el[i], style);
+            l = this.parseFolder(el[i], style, kmlOptions);
             if (l) { layers.push(l); }
         }
         el = xml.getElementsByTagName('Placemark');
         for (var j = 0; j < el.length; j++) {
             if (!this._check_folder(el[j])) { continue; }
-            l = this.parsePlacemark(el[j], xml, style);
+            l = this.parsePlacemark(el[j], xml, style, undefined, kmlOptions);
             if (l) { layers.push(l); }
         }
         el = xml.getElementsByTagName('GroundOverlay');
         for (var k = 0; k < el.length; k++) {
             if (!this._check_folder(el[k])) { continue; }
-            l = this.parseGroundOverlay(el[k]);
+            l = this.parseGroundOverlay(el[k], kmlOptions);
             if (l) { layers.push(l); }
         }
         return layers;
@@ -129,7 +172,8 @@ L.Util.extend(L.KML, {
                     }
                 } else {
                     var value = (e.childNodes && e.childNodes.length) ? e.childNodes[0].nodeValue : null;
-                    if(!value) {
+                    // <Icon> holds child elements, so it has no text value of its own
+                    if (!value && key !== 'Icon') {
                         continue;
                     }
                     if (key === 'color') {
@@ -158,7 +202,7 @@ L.Util.extend(L.KML, {
         if (el && el[0]) { ioptions = _parse(el[0]); }
         if (ioptions.href) {
             var iconOptions = {
-                iconUrl: ioptions.href,
+                iconUrl: this.resolveHref(ioptions.href, kmlOptions),
                 shadowUrl: null,
                 anchorRef: {x: ioptions.x, y: ioptions.y},
                 anchorType:    {x: ioptions.xunits, y: ioptions.yunits}
@@ -200,24 +244,24 @@ L.Util.extend(L.KML, {
         return;
     },
 
-    parseFolder: function (xml, style) {
+    parseFolder: function (xml, style, kmlOptions) {
         var el, layers = [], l;
         el = xml.getElementsByTagName('Folder');
         for (var i = 0; i < el.length; i++) {
             if (!this._check_folder(el[i], xml)) { continue; }
-            l = this.parseFolder(el[i], style);
+            l = this.parseFolder(el[i], style, kmlOptions);
             if (l) { layers.push(l); }
         }
         el = xml.getElementsByTagName('Placemark');
         for (var j = 0; j < el.length; j++) {
             if (!this._check_folder(el[j], xml)) { continue; }
-            l = this.parsePlacemark(el[j], xml, style);
+            l = this.parsePlacemark(el[j], xml, style, undefined, kmlOptions);
             if (l) { layers.push(l); }
         }
         el = xml.getElementsByTagName('GroundOverlay');
         for (var k = 0; k < el.length; k++) {
             if (!this._check_folder(el[k], xml)) { continue; }
-            l = this.parseGroundOverlay(el[k]);
+            l = this.parseGroundOverlay(el[k], kmlOptions);
             if (l) { layers.push(l); }
         }
         if (!layers.length) { return; }
@@ -233,7 +277,7 @@ L.Util.extend(L.KML, {
         return l;
     },
 
-    parsePlacemark: function (place, xml, style, options) {
+    parsePlacemark: function (place, xml, style, options, kmlOptions) {
         var h, i, j, k, el, il, opts = options || {};
 
         el = place.getElementsByTagName('styleUrl');
@@ -246,7 +290,7 @@ L.Util.extend(L.KML, {
 
         il = place.getElementsByTagName('Style')[0];
         if (il) {
-            var inlineStyle = this.parseStyle(place);
+            var inlineStyle = this.parseStyle(place, kmlOptions);
             if (inlineStyle) {
                 for (k in inlineStyle) {
                     opts[k] = inlineStyle[k];
@@ -258,7 +302,7 @@ L.Util.extend(L.KML, {
         for (h = 0; h < multi.length; h++) {
             el = place.getElementsByTagName(multi[h]);
             for (i = 0; i < el.length; i++) {
-                var layer = this.parsePlacemark(el[i], xml, style, opts);
+                var layer = this.parsePlacemark(el[i], xml, style, opts, kmlOptions);
                 if (layer === undefined)
                     continue;
                 this.addPlacePopup(place, layer);
@@ -309,6 +353,122 @@ L.Util.extend(L.KML, {
             title.textContent = name;
             layer.bindPopup('<h2>' + title.innerHTML + '</h2>' + descr, { className: 'kml-popup'});
         }
+    },
+
+    // Resolve an icon/overlay link: files packed in a KMZ become blob: URLs,
+    // relative links are resolved against kmlOptions.baseUrl (set by load()).
+    resolveHref: function (href, kmlOptions) {
+        if (!href || !kmlOptions) { return href; }
+        var resources = kmlOptions.resources;
+        if (resources) {
+            var key = href.replace(/^\.\//, '');
+            if (resources[key]) { return resources[key]; }
+            try {
+                key = decodeURI(key);
+                if (resources[key]) { return resources[key]; }
+            } catch (e) { return href; } // eslint-disable-line no-unused-vars -- malformed escape: keep the link as is
+        }
+        if (kmlOptions.baseUrl && !/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) {
+            try {
+                var base = new URL(kmlOptions.baseUrl, typeof document !== 'undefined' ? document.baseURI : undefined);
+                return new URL(href, base).href;
+            } catch (e) { return href; } // eslint-disable-line no-unused-vars -- unresolvable base: keep the link as is
+        }
+        return href;
+    },
+
+    _isZip: function (buffer) {
+        var b = new Uint8Array(buffer, 0, Math.min(4, buffer.byteLength));
+        return b.length === 4 && b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04;
+    },
+
+    _mimeTypes: {
+        png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+        webp: 'image/webp', svg: 'image/svg+xml'
+    },
+
+    // Reads a KMZ archive: resolves to {text: <main kml>, resources: {name: blob: URL}}
+    _readKMZ: function (buffer) {
+        var self = this;
+        return this._readZip(buffer).then(function (files) {
+            var names = Object.keys(files), main;
+            for (var i = 0; i < names.length; i++) {
+                if (!/\.kml$/i.test(names[i])) { continue; }
+                // prefer doc.kml, otherwise the shallowest *.kml
+                if (!main || /^doc\.kml$/i.test(names[i]) ||
+                    (!/^doc\.kml$/i.test(main) && names[i].split('/').length < main.split('/').length)) {
+                    main = names[i];
+                }
+            }
+            if (!main) { throw new Error('No .kml file found in KMZ'); }
+
+            var resources = {};
+            names.forEach(function (name) {
+                var mime = self._mimeTypes[name.split('.').pop().toLowerCase()];
+                if (name !== main && mime) {
+                    resources[name] = URL.createObjectURL(new Blob([files[name]], {type: mime}));
+                }
+            });
+            return {text: new TextDecoder('utf-8').decode(files[main]), resources: resources};
+        });
+    },
+
+    // Minimal ZIP reader (stored and deflate entries, no ZIP64).
+    // Resolves to {entryName: Uint8Array}. Deflate needs DecompressionStream.
+    _readZip: function (buffer) {
+        var view = new DataView(buffer), bytes = new Uint8Array(buffer);
+        var decoder = new TextDecoder('utf-8');
+        var eocd = -1, i;
+        for (i = buffer.byteLength - 22; i >= Math.max(0, buffer.byteLength - 22 - 65535); i--) {
+            if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+        }
+        if (eocd < 0) { return Promise.reject(new Error('Invalid KMZ: not a zip archive')); }
+
+        var count = view.getUint16(eocd + 10, true);
+        var pos = view.getUint32(eocd + 16, true);
+        var jobs = [];
+
+        function inflate(data) {
+            if (typeof DecompressionStream !== 'function') {
+                throw new Error('KMZ is compressed and this browser has no DecompressionStream');
+            }
+            var stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+            return new Response(stream).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+        }
+
+        function readEntry(name, method, size, local) {
+            if (view.getUint32(local, true) !== 0x04034b50) { throw new Error('Invalid KMZ: bad entry ' + name); }
+            var start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+            var data = bytes.subarray(start, start + size);
+            if (method === 0) { return Promise.resolve(data); }
+            if (method === 8) { return inflate(data); }
+            throw new Error('Unsupported zip compression method ' + method + ' in ' + name);
+        }
+
+        try {
+            for (i = 0; i < count; i++) {
+                if (view.getUint32(pos, true) !== 0x02014b50) { throw new Error('Invalid KMZ: bad directory'); }
+                var method = view.getUint16(pos + 10, true);
+                var size = view.getUint32(pos + 20, true);
+                var nameLen = view.getUint16(pos + 28, true);
+                var extraLen = view.getUint16(pos + 30, true);
+                var commentLen = view.getUint16(pos + 32, true);
+                var local = view.getUint32(pos + 42, true);
+                var name = decoder.decode(bytes.subarray(pos + 46, pos + 46 + nameLen));
+                pos += 46 + nameLen + extraLen + commentLen;
+                if (name.charAt(name.length - 1) === '/') { continue; }
+                jobs.push(readEntry(name, method, size, local).then(
+                    (function (n) { return function (data) { return [n, data]; }; })(name)));
+            }
+        } catch (e) {
+            return Promise.reject(e);
+        }
+
+        return Promise.all(jobs).then(function (entries) {
+            var files = {};
+            entries.forEach(function (e) { files[e[0]] = e[1]; });
+            return files;
+        });
     },
 
     parseCoords: function (xml) {
@@ -403,7 +563,7 @@ L.Util.extend(L.KML, {
         return coords;
     },
 
-    parseGroundOverlay: function (xml) {
+    parseGroundOverlay: function (xml, kmlOptions) {
         var latlonbox = xml.getElementsByTagName('LatLonBox')[0];
         if (!latlonbox) { return; }
         var bounds = new L.LatLngBounds(
@@ -441,7 +601,7 @@ L.Util.extend(L.KML, {
             var rotation = latlonbox.getElementsByTagName('rotation')[0].childNodes[0].nodeValue;
             options.rotation = parseFloat(rotation);
         }
-        return new L.RotatedImageOverlay(options.href, bounds, {opacity: options.opacity, angle: options.rotation});
+        return new L.RotatedImageOverlay(this.resolveHref(options.href, kmlOptions), bounds, {opacity: options.opacity, angle: options.rotation});
     }
 
 });

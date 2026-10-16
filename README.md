@@ -69,6 +69,9 @@ map.addLayer(track);
 - `loaded` fires once the layers have been added; `error` fires on network/HTTP errors and on invalid XML (`e.error`, `e.url`).
 - `kmlOptions.fetchOptions` is passed to `fetch` (headers, credentials, etc.).
 - Remote servers must allow cross-origin requests (CORS).
+- Relative icon and `GroundOverlay` links are resolved against the URL of the KML file.
+- **KMZ** is supported: if the response is a zip archive, the main `.kml` (`doc.kml`, otherwise the shallowest one) is parsed and packed images are served from `blob:` URLs. Compressed entries need `DecompressionStream` (all current browsers). Call `track.revokeResources()` when you discard the layer to free those URLs.
+- Calling `load()` again, or `track.abort()`, cancels a request that is still in flight; its result is ignored.
 - You can also call `track.load(url)` on an existing layer. Passing a parsed XML `Document` still works as before.
 
 A runnable demo is in [examples/url.html](examples/url.html). `fetch` does not work from `file://`, so serve the repo first:
