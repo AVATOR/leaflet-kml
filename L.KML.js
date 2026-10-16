@@ -80,6 +80,7 @@ L.Util.extend(L.KML, {
         }
         el = xml.getElementsByTagName('GroundOverlay');
         for (var k = 0; k < el.length; k++) {
+            if (!this._check_folder(el[k])) { continue; }
             l = this.parseGroundOverlay(el[k]);
             if (l) { layers.push(l); }
         }
